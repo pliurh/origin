@@ -76,6 +76,7 @@ func main() {
 		newImagesCommand(),
 		newRunTestCommand(),
 		newRunMonitorCommand(),
+		newRunSdnMigrationCommand(),
 		cmd.NewRunResourceWatchCommand(),
 		monitor_cmd.NewTimelineCommand(genericclioptions.IOStreams{
 			In:     os.Stdin,
@@ -399,6 +400,66 @@ func newRunUpgradeCommand() *cobra.Command {
 
 	bindOptions(opt, cmd.Flags())
 	bindUpgradeOptions(opt, cmd.Flags())
+	return cmd
+}
+
+func newRunSdnMigrationCommand() *cobra.Command {
+	opt := NewRunOptions(defaultTestImageMirrorLocation)
+
+	cmd := &cobra.Command{
+		Use:   "run-sdn-migration SUITE",
+		Short: "Run an sdn migration suite",
+		Long: templates.LongDesc(`
+		Run an upgrade test suite against an OpenShift server
+
+		This command will run one of the following suites against a cluster identified by the current
+		KUBECONFIG file. See the suite description for more on what actions the suite will take.
+
+		If you specify the --dry-run argument, the actions the suite will take will be printed to the
+		output.
+
+		Supported options:
+
+		* abort-at=NUMBER - Set to a number between 0 and 100 to control the percent of operators
+		at which to stop the current upgrade and roll back to the current version.
+		* disrupt-reboot=POLICY - During upgrades, periodically reboot master nodes. If set to 'graceful'
+		the reboot will allow the node to shut down services in an orderly fashion. If set to 'force' the
+		machine will terminate immediately without clean shutdown.
+
+		`) + testginkgo.SuitesString(sdnMigrationSuites.TestSuites(), "\n\nAvailable sdn migration suites:\n\n"),
+
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return mirrorToFile(opt.Options, func() error {
+				suite, err := opt.SelectSuite(sdnMigrationSuites, args)
+				if err != nil {
+					return err
+				}
+				opt.UpgradeSuite = suite.Name
+				if suite.PreSuite != nil {
+					if err := suite.PreSuite(opt); err != nil {
+						return err
+					}
+				}
+				opt.CommandEnv = opt.AsEnv()
+				if !opt.DryRun {
+					fmt.Fprintf(os.Stderr, "%s version: %s\n", filepath.Base(os.Args[0]), version.Get().String())
+				}
+				err = opt.Run(&suite.TestSuite, "openshift-tests-sdn-migration")
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Suite run returned error: %s\n", err.Error())
+				}
+				if suite.PostSuite != nil {
+					suite.PostSuite(opt)
+				}
+				return err
+			})
+		},
+	}
+
+	bindOptions(opt, cmd.Flags())
+	bindSdnMigrationOptions(opt, cmd.Flags())
 	return cmd
 }
 

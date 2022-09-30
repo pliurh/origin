@@ -34,6 +34,39 @@ func realNow() time.Time {
 	return time.Now()
 }
 
+func WaitForOperatorToSettle(ctx context.Context, configClient clientconfigv1.Interface, name string) error {
+	framework.Logf("Waiting for operators to settle")
+	var unsettledOperatorStatus []string
+	if err := wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
+		co, err := configClient.ConfigV1().ClusterOperators().Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			framework.Logf("error getting ClusterOperators %v", err)
+			return false, nil
+		}
+		available := findCondition(co.Status.Conditions, configv1.OperatorAvailable)
+		degraded := findCondition(co.Status.Conditions, configv1.OperatorDegraded)
+		progressing := findCondition(co.Status.Conditions, configv1.OperatorProgressing)
+		if available.Status == configv1.ConditionTrue &&
+			degraded.Status == configv1.ConditionFalse &&
+			progressing.Status == configv1.ConditionFalse {
+			return true, nil
+		}
+		if available.Status != configv1.ConditionTrue {
+			unsettledOperatorStatus = append(unsettledOperatorStatus, fmt.Sprintf("clusteroperator/%v is not Available for %v because %q", co.Name, nowFn().Sub(available.LastTransitionTime.Time), available.Message))
+		}
+		if degraded.Status != configv1.ConditionFalse {
+			unsettledOperatorStatus = append(unsettledOperatorStatus, fmt.Sprintf("clusteroperator/%v is Degraded for %v because %q", co.Name, nowFn().Sub(degraded.LastTransitionTime.Time), degraded.Message))
+		}
+		if progressing.Status != configv1.ConditionFalse {
+			unsettledOperatorStatus = append(unsettledOperatorStatus, fmt.Sprintf("clusteroperator/%v is Progressing for %v because %q", co.Name, nowFn().Sub(progressing.LastTransitionTime.Time), progressing.Message))
+		}
+		return false, nil
+	}); err != nil {
+		return fmt.Errorf("ClusterNetworkOperator did not settle: \n%v", strings.Join(unsettledOperatorStatus, "\n\t"))
+	}
+	return nil
+}
+
 func WaitForOperatorsToSettle(ctx context.Context, configClient clientconfigv1.Interface) error {
 	framework.Logf("Waiting for operators to settle")
 	unsettledOperatorStatus := []string{}
