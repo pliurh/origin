@@ -459,14 +459,38 @@ spec:
   - featureGate: RouteAdvertisements
     tests:
     - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
-        [PodNetwork] the default network [apigroup:user.openshift.io][apigroup:security.openshift.io]
-        External host should be able to quay route advertised pods by the pod IP'
+        when using openshift ovn-kubernetes [EgressIP][apigroup:user.openshift.io][apigroup:security.openshift.io]
+        pods should have the assigned EgressIPs and EgressIPs can be deleted and recreated
+        [apigroup:route.openshift.io]'
     - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
-        [PodNetwork] the default network [apigroup:user.openshift.io][apigroup:security.openshift.io]
-        nodes should learn BGP routes to the PodNetwork'
+        when using openshift ovn-kubernetes [EgressIP][apigroup:user.openshift.io][apigroup:security.openshift.io]
+        pods should keep the assigned EgressIPs when being rescheduled to another
+        node'
     - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
-        [PodNetwork] the default network [apigroup:user.openshift.io][apigroup:security.openshift.io]
-        pods should communicate with external host without being SNATed'
+        when using openshift ovn-kubernetes [PodNetwork] advertise a user define network
+        to the default VRF [apigroup:user.openshift.io][apigroup:security.openshift.io]
+        External host should be able to quay route advertised pods by the pod UDN
+        IP'
+    - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
+        when using openshift ovn-kubernetes [PodNetwork] advertise a user define network
+        to the default VRF [apigroup:user.openshift.io][apigroup:security.openshift.io]
+        nodes should learn BGP routes to the user defined network'
+    - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
+        when using openshift ovn-kubernetes [PodNetwork] advertise a user define network
+        to the default VRF [apigroup:user.openshift.io][apigroup:security.openshift.io]
+        pods should communicate with external host via UDN without being SNATed'
+    - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
+        when using openshift ovn-kubernetes [PodNetwork] advertise the default network
+        [apigroup:user.openshift.io][apigroup:security.openshift.io] External host
+        should be able to quay route advertised pods by the pod IP'
+    - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
+        when using openshift ovn-kubernetes [PodNetwork] advertise the default network
+        [apigroup:user.openshift.io][apigroup:security.openshift.io] nodes should
+        learn BGP routes to the PodNetwork'
+    - testName: '[sig-network][OCPFeatureGate:RouteAdvertisements][Feature:RouteAdvertisements][apigroup:operator.openshift.io]
+        when using openshift ovn-kubernetes [PodNetwork] advertise the default network
+        [apigroup:user.openshift.io][apigroup:security.openshift.io] pods should communicate
+        with external host without being SNATed'
   - featureGate: SELinuxMount
     tests:
     - testName: '[sig-storage] CSI Mock selinux on mount SELinuxMount [LinuxOnly]
